@@ -1,25 +1,4 @@
-{/*const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 
-// مسیر ذخیره عکس‌ها
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, "..", "uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath);
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + path.extname(file.originalname);
-    cb(null, uniqueSuffix);
-  },
-});
-
-const upload = multer({ storage });
-module.exports = upload;
-*/}
 
 // middlewares/upload.js
 const multer = require("multer");

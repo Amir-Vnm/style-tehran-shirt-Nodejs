@@ -1,8 +1,5 @@
-// controllers/categoryController.js
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-const fs = require("fs");
-const path = require("path");
 
 // 📘 دریافت تمام دسته‌بندی‌ها
 exports.getAllCategories = async (req, res) => {
@@ -30,11 +27,11 @@ exports.getCategoryById = async (req, res) => {
   }
 };
 
-// 🟢 ایجاد دسته‌بندی جدید
+// 🟢 ایجاد دسته‌بندی جدید (با ذخیره لینک Cloudinary)
 exports.createCategory = async (req, res) => {
   try {
     const Name = req.body.Name;
-    const ImageFile = req.file ? `/uploads/${req.file.filename}` : null;
+    const ImageFile = req.file ? req.file.path : null; // ✅ لینک Cloudinary
 
     const newCategory = await prisma.category.create({
       data: { Name, ImageFile },
@@ -47,7 +44,7 @@ exports.createCategory = async (req, res) => {
   }
 };
 
-// 🟠 ویرایش دسته‌بندی (اختیاری ولی آماده)
+// 🟠 ویرایش دسته‌بندی (در صورت نیاز به آپدیت عکس)
 exports.updateCategory = async (req, res) => {
   const id = parseInt(req.params.id);
   try {
@@ -58,16 +55,9 @@ exports.updateCategory = async (req, res) => {
 
     let ImageFile = category.ImageFile;
 
-    // اگر عکس جدید فرستاده شد
+    // اگر عکس جدید فرستاده شد → جایگزین لینک جدید Cloudinary
     if (req.file) {
-      // حذف عکس قبلی
-      if (category.ImageFile) {
-        const oldPath = path.join(__dirname, "..", category.ImageFile.replace(/^\//, ""));
-        fs.unlink(oldPath, (err) => {
-          if (err) console.warn("⚠️ حذف عکس قبلی با خطا:", err.message);
-        });
-      }
-      ImageFile = `/uploads/${req.file.filename}`;
+      ImageFile = req.file.path; // ✅ لینک جدید Cloudinary
     }
 
     const updatedCategory = await prisma.category.update({
@@ -93,17 +83,6 @@ exports.deleteCategory = async (req, res) => {
     const category = await prisma.category.findUnique({ where: { id } });
     if (!category) {
       return res.status(404).json({ error: "دسته‌بندی پیدا نشد" });
-    }
-
-    if (category.ImageFile) {
-      const imagePath = path.join(__dirname, "..", category.ImageFile.replace(/^\//, ""));
-      try {
-        await fs.promises.access(imagePath, fs.constants.F_OK);
-        await fs.promises.unlink(imagePath);
-        console.log("🗑 عکس حذف شد:", imagePath);
-      } catch (fsErr) {
-        console.warn("⚠️ فایل عکس وجود ندارد:", fsErr.message);
-      }
     }
 
     await prisma.category.delete({ where: { id } });
