@@ -3,24 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Category {
-  id         Int      @id @default(autoincrement())
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
   Name       String
   ImageFile  String?
   products   Product[]
-  createdAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
   ImageFile   String
   Price       Float
   Description String
   Inventory   Int
-  Category    Category @relation(fields: [CategoryId], references: [id])
-  CategoryId  Int
+  CategoryId  String    @db.ObjectId
+  Category    Category  @relation(fields: [CategoryId], references: [id])
 }
