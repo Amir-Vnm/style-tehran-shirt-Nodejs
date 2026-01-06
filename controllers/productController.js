@@ -1,37 +1,29 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-export default prisma;
-
-
 // controllers/productController.js
 
-
+const prisma = require("../db/prisma"); // ✅ CommonJS
 const fs = require("fs");
 const path = require("path");
 const cloudinary = require("cloudinary").v2;
 require("dotenv").config();
 
 if (process.env.CLOUDINARY_URL) {
-  // cloudinary lib خودش CLOUDINARY_URL رو می‌خونه؛ این فقط مطمئن میشه
+  // cloudinary lib خودش CLOUDINARY_URL رو می‌خونه
   cloudinary.config({ secure: true });
 }
 
-// helper: از URL کلودینری public_id استخراج کن
+// helper: استخراج public_id از URL کلودینری
 function getCloudinaryPublicIdFromUrl(url) {
   if (!url) return null;
-  // match between "/upload/" and extension (jpg|png...)
-  // example: https://res.cloudinary.com/dorsbiuzs/image/upload/v12345/products/abc123.jpg
   const m = url.match(/\/upload\/(?:v\d+\/)?(.+)\.(jpg|jpeg|png|webp|gif)$/i);
   return m ? m[1] : null;
 }
 
-// گرفتن همه محصولات یا با query category
-exports.getAllProducts = async (req, res) => {
+// 📘 گرفتن همه محصولات (یا فیلتر بر اساس category)
+const getAllProducts = async (req, res) => {
   try {
     const { category } = req.query;
     let products;
+
     if (category) {
       products = await prisma.product.findMany({
         where: { CategoryId: parseInt(category) },
@@ -42,6 +34,7 @@ exports.getAllProducts = async (req, res) => {
         include: { Category: true },
       });
     }
+
     res.json(products);
   } catch (error) {
     console.error("❌ خطا در دریافت محصولات:", error);
@@ -49,8 +42,8 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// گرفتن محصولات بر اساس پارامتر categoryId
-exports.getProductsByCategory = async (req, res) => {
+// 📗 گرفتن محصولات بر اساس categoryId
+const getProductsByCategory = async (req, res) => {
   const { categoryId } = req.params;
   try {
     const products = await prisma.product.findMany({
@@ -64,15 +57,19 @@ exports.getProductsByCategory = async (req, res) => {
   }
 };
 
-// گرفتن محصول خاص
-exports.getProductById = async (req, res) => {
+// 📙 گرفتن محصول با ID
+const getProductById = async (req, res) => {
   const { id } = req.params;
   try {
     const product = await prisma.product.findUnique({
       where: { id: parseInt(id) },
       include: { Category: true },
     });
-    if (!product) return res.status(404).json({ error: "محصول پیدا نشد" });
+
+    if (!product) {
+      return res.status(404).json({ error: "محصول پیدا نشد" });
+    }
+
     res.json(product);
   } catch (error) {
     console.error("❌ خطا در دریافت محصول:", error);
@@ -80,12 +77,11 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// ایجاد محصول جدید
-exports.createProduct = async (req, res) => {
+// 🟢 ایجاد محصول
+const createProduct = async (req, res) => {
   try {
     const { Price, Description, Inventory, CategoryId } = req.body;
 
-    // از multer-storage-cloudinary، URL تصویر معمولاً در req.file.path یا req.file?.path قرار می‌گیرد
     const ImageFile =
       (req.file && (req.file.path || req.file.url || req.file.secure_url)) || null;
 
@@ -106,8 +102,8 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// آپدیت محصول
-exports.updateProduct = async (req, res) => {
+// 🟠 آپدیت محصول
+const updateProduct = async (req, res) => {
   const { id } = req.params;
   const { Price, Description, Inventory, CategoryId } = req.body;
 
@@ -120,23 +116,23 @@ exports.updateProduct = async (req, res) => {
       return res.status(404).json({ error: "محصول پیدا نشد" });
     }
 
-    // در صورت آپلود عکس جدید، URL جدید رو بگیر و تصویر قبلی رو از Cloudinary حذف کن
     let ImageFile = existingProduct.ImageFile;
+
     if (req.file) {
-      // حذف تصویر قبلی از Cloudinary (اگر وجود داشت)
       if (ImageFile) {
         const publicId = getCloudinaryPublicIdFromUrl(ImageFile);
         if (publicId) {
           try {
             await cloudinary.uploader.destroy(publicId);
           } catch (err) {
-            console.warn("⚠️ خطا در حذف تصویر قدیمی از Cloudinary:", err.message);
+            console.warn("⚠️ خطا در حذف تصویر قدیمی:", err.message);
           }
         }
       }
 
       ImageFile =
-        (req.file && (req.file.path || req.file.url || req.file.secure_url)) || ImageFile;
+        (req.file && (req.file.path || req.file.url || req.file.secure_url)) ||
+        ImageFile;
     }
 
     const updated = await prisma.product.update({
@@ -157,9 +153,10 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// حذف محصول
-exports.deleteProduct = async (req, res) => {
+// 🔴 حذف محصول
+const deleteProduct = async (req, res) => {
   const { id } = req.params;
+
   try {
     const existingProduct = await prisma.product.findUnique({
       where: { id: parseInt(id) },
@@ -169,19 +166,17 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ error: "محصول پیدا نشد" });
     }
 
-    // اگر تصویر در Cloudinary هست، public id استخراج و حذف کن
     if (existingProduct.ImageFile) {
       const publicId = getCloudinaryPublicIdFromUrl(existingProduct.ImageFile);
       if (publicId) {
         try {
           await cloudinary.uploader.destroy(publicId);
         } catch (err) {
-          console.warn("⚠️ خطا در حذف عکس محصول از Cloudinary:", err.message);
+          console.warn("⚠️ خطا در حذف عکس از Cloudinary:", err.message);
         }
       }
     }
 
-    // حذف رکورد دیتابیس
     await prisma.product.delete({
       where: { id: parseInt(id) },
     });
@@ -193,7 +188,12 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-
-
-
-
+// ✅ خروجی CommonJS
+module.exports = {
+  getAllProducts,
+  getProductsByCategory,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+};
