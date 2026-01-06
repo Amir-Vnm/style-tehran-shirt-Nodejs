@@ -1,7 +1,6 @@
 import prisma from '../db/prisma.js';
 
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+
 
 // 📘 دریافت تمام دسته‌بندی‌ها
 exports.getAllCategories = async (req, res) => {

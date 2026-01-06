@@ -1,8 +1,13 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export default prisma;
 
 
 // controllers/productController.js
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+
+
 const fs = require("fs");
 const path = require("path");
 const cloudinary = require("cloudinary").v2;
