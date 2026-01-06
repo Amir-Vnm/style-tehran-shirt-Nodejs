@@ -1,9 +1,7 @@
-import prisma from '../db/prisma.js';
-
-
+const prisma = require("../db/prisma");
 
 // 📘 دریافت تمام دسته‌بندی‌ها
-exports.getAllCategories = async (req, res) => {
+const getAllCategories = async (req, res) => {
   try {
     const categories = await prisma.category.findMany();
     res.json(categories);
@@ -14,7 +12,7 @@ exports.getAllCategories = async (req, res) => {
 };
 
 // 📗 دریافت یک دسته بر اساس ID
-exports.getCategoryById = async (req, res) => {
+const getCategoryById = async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const category = await prisma.category.findUnique({ where: { id } });
@@ -28,11 +26,11 @@ exports.getCategoryById = async (req, res) => {
   }
 };
 
-// 🟢 ایجاد دسته‌بندی جدید (با ذخیره لینک Cloudinary)
-exports.createCategory = async (req, res) => {
+// 🟢 ایجاد دسته‌بندی
+const createCategory = async (req, res) => {
   try {
     const Name = req.body.Name;
-    const ImageFile = req.file ? req.file.path : null; // ✅ لینک Cloudinary
+    const ImageFile = req.file ? req.file.path : null;
 
     const newCategory = await prisma.category.create({
       data: { Name, ImageFile },
@@ -45,8 +43,8 @@ exports.createCategory = async (req, res) => {
   }
 };
 
-// 🟠 ویرایش دسته‌بندی (در صورت نیاز به آپدیت عکس)
-exports.updateCategory = async (req, res) => {
+// 🟠 ویرایش دسته
+const updateCategory = async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const category = await prisma.category.findUnique({ where: { id } });
@@ -54,18 +52,11 @@ exports.updateCategory = async (req, res) => {
       return res.status(404).json({ error: "دسته‌بندی پیدا نشد" });
     }
 
-    let ImageFile = category.ImageFile;
-
-    // اگر عکس جدید فرستاده شد → جایگزین لینک جدید Cloudinary
-    if (req.file) {
-      ImageFile = req.file.path; // ✅ لینک جدید Cloudinary
-    }
-
     const updatedCategory = await prisma.category.update({
       where: { id },
       data: {
         Name: req.body.Name || category.Name,
-        ImageFile,
+        ImageFile: req.file ? req.file.path : category.ImageFile,
       },
     });
 
@@ -76,20 +67,22 @@ exports.updateCategory = async (req, res) => {
   }
 };
 
-// 🔴 حذف دسته‌بندی
-exports.deleteCategory = async (req, res) => {
+// 🔴 حذف دسته
+const deleteCategory = async (req, res) => {
   const id = parseInt(req.params.id);
-
   try {
-    const category = await prisma.category.findUnique({ where: { id } });
-    if (!category) {
-      return res.status(404).json({ error: "دسته‌بندی پیدا نشد" });
-    }
-
     await prisma.category.delete({ where: { id } });
-    res.json({ message: "✅ دسته‌بندی با موفقیت حذف شد" });
+    res.json({ message: "✅ دسته‌بندی حذف شد" });
   } catch (error) {
     console.error("❌ خطا در حذف دسته‌بندی:", error);
     res.status(500).json({ error: "خطا در حذف دسته‌بندی" });
   }
+};
+
+module.exports = {
+  getAllCategories,
+  getCategoryById,
+  createCategory,
+  updateCategory,
+  deleteCategory,
 };
